@@ -1,0 +1,27 @@
+<div class="tournaments-container">
+  <h2>🎮 Current Tournaments</h2>
+  
+  <% if (tournaments.length > 0) { %>
+    <div class="tournament-grid">
+      <% tournaments.forEach(tournament => { %>
+        <div class="tournament-card">
+          <h3><%= tournament.name %></h3>
+          <p class="tournament-date">
+            📅 <%= tournament.date.toLocaleDateString() %>
+          </p>
+          <p class="tournament-participants">
+            👥 <%= tournament.participants || 0 %> participants
+          </p>
+          <button class="join-btn" data-tournament-id="<%= tournament._id %>">
+            Join Tournament
+          </button>
+        </div>
+      <% }); %>
+    </div>
+  <% } else { %>
+    <div class="no-tournaments">
+      <p>No tournaments available at the moment.</p>
+      <p>Check back later!</p>
+    </div>
+  <% } %>
+</div>

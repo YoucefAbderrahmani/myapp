@@ -1,0 +1,20 @@
+<div class="home-content">
+  <h2>🏠 Welcome Home</h2>
+  <p>Hello <%= typeof username !== 'undefined' ? username : 'Guest' %>!</p>
+  
+  <div class="card">
+    <h3>🔥 Latest Tournaments</h3>
+    <ul>
+      <% if (typeof tournaments !== 'undefined' && tournaments.length > 0) { %>
+        <% tournaments.forEach(tournament => { %>
+          <li>
+            <%= tournament.name || 'Unnamed Tournament' %> - 
+            <%= tournament.date ? tournament.date.toLocaleDateString() : 'Date TBD' %>
+          </li>
+        <% }); %>
+      <% } else { %>
+        <li>No tournaments scheduled yet</li>
+      <% } %>
+    </ul>
+  </div>
+</div>

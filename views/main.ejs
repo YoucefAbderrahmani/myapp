@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title><%= title || 'Game Platform' %></title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body data-username="<%= username || '' %>">
+
+  <div class="app-wrapper">
+    <!-- Chat sidebar -->
+    <div class="chat-sidebar">
+      <h3>Live Chat</h3>
+      <ul id="messages"></ul>
+      <form id="chat-form">
+        <input id="m" autocomplete="off" placeholder="Type a message...">
+        <button>Send</button>
+      </form>
+    </div>
+
+    <!-- Main content area -->
+    <div class="right-content">
+      <nav class="top-nav">
+        <ul>
+          <li><a href="/main/home">Home</a></li>
+          <li><a href="/main/tournaments">Tournaments</a></li>
+          <li><a href="/main/store">Store</a></li>
+          <li><a href="/main/profile">Profile</a></li>
+          <li><a href="/main/about">About</a></li>
+          <li><a href="/logout">Logout</a></li>
+        </ul>
+      </nav>
+
+      <div class="main-container">
+        <header>
+          <h1>Welcome<% if (typeof username !== 'undefined' && username) { %>, <%= username %><% } %>!</h1>
+        </header>
+
+        <main id="page-content">
+          <% try { %>
+            <%- include(`partials/${currentPage || 'home'}`) %>
+          <% } catch (e) { %>
+            <div class="error">
+              <h3>Page Load Error</h3>
+              <p>Couldn't load the <%= currentPage %> content</p>
+              <a href="/main/home">Return to Home</a>
+            </div>
+          <% } %>
+
+          <% if (currentPage === 'profile') { %>
+            <script src="/js/profile.js"></script>
+          <% } %>
+
+          <% if (typeof profileError !== 'undefined' && profileError) { %>
+            <div class="error-message">
+              <%= profileError %>
+              <a href="/main/profile" class="retry-button">Try Again</a>
+            </div>
+          <% } %>
+        </main>
+      </div>
+    </div>
+  </div>
+
+  <!-- ✅ Scripts (only once) -->
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/chat.js"></script>
+</body>
+</html>

@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Complete Your Profile</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <h1>Complete Your Profile</h1>
+  
+  <% if (profileError) { %>
+    <p style="color:red;"><%= profileError %></p>
+  <% } %>
+
+  <form action="/complete-profile" method="POST">
+    <label for="username">Username:</label>
+    <input type="text" name="username" id="username" required>
+    <br>
+
+    <label for="phone">Phone:</label>
+    <input type="text" name="phone" id="phone" required>
+    <br>
+
+    <button type="submit">Save</button>
+  </form>
+</body>
+</html>
