@@ -4,6 +4,11 @@ const User = require('../models/User');
 const Tournament = require('../models/Tournament');
 const StoreItem = require('../models/StoreItem');
 
+// ✅ Fix: Handle root route so / shows home page
+router.get('/', (req, res) => {
+  res.redirect('/main/home');
+});
+
 // Middleware to check authentication
 function ensureAuthenticated(req, res, next) {
   if (!req.isAuthenticated() || !req.session.userId) {
@@ -37,7 +42,6 @@ function ensureAuthenticated(req, res, next) {
     });
 }
 
-
 // Apply middleware to protected routes
 router.use(['/main', '/complete-profile'], ensureAuthenticated);
 
@@ -59,7 +63,6 @@ router.get('/main/:page', async (req, res) => {
     const data = {
       title: currentPage.charAt(0).toUpperCase() + currentPage.slice(1),
       username: req.user?.username || 'Guest',
-
       avatarUrl: req.user.avatarUrl || '/images/default-avatar.png',
       currentPage,
       user: null,
@@ -97,7 +100,7 @@ router.get('/complete-profile', (req, res) => {
   });
 });
 
-// ✅ Complete profile POST - final fixed version
+// Complete profile POST
 router.post('/complete-profile', async (req, res) => {
   const { username, phone } = req.body;
 
@@ -111,33 +114,32 @@ router.post('/complete-profile', async (req, res) => {
 
   try {
     // Check if username is already taken
-const existingUser = await User.findOne({ 
-  username,
-  _id: { $ne: req.user._id }
-});
+    const existingUser = await User.findOne({
+      username,
+      _id: { $ne: req.user._id }
+    });
 
-if (existingUser) {
-  return res.render('complete-profile', {
-    profileError: 'Username already taken',
-    username,
-    phone
-  });
-}
+    if (existingUser) {
+      return res.render('complete-profile', {
+        profileError: 'Username already taken',
+        username,
+        phone
+      });
+    }
 
-// ✅ Check if phone number is already in use
-const existingPhone = await User.findOne({
-  phone,
-  _id: { $ne: req.user._id }
-});
+    // Check if phone number is already in use
+    const existingPhone = await User.findOne({
+      phone,
+      _id: { $ne: req.user._id }
+    });
 
-if (existingPhone) {
-  return res.render('complete-profile', {
-    profileError: 'Phone number already in use',
-    username,
-    phone
-  });
-}
-
+    if (existingPhone) {
+      return res.render('complete-profile', {
+        profileError: 'Phone number already in use',
+        username,
+        phone
+      });
+    }
 
     const updatedUser = await User.findByIdAndUpdate(
       req.user._id,
@@ -145,7 +147,6 @@ if (existingPhone) {
       { new: true }
     );
 
-    // ✅ Save session + Passport login
     req.login(updatedUser, (err) => {
       if (err) {
         console.error('Login refresh error:', err);
@@ -156,7 +157,6 @@ if (existingPhone) {
         });
       }
 
-      // ✅ Set session.userId again
       req.session.userId = updatedUser._id;
 
       req.session.save((saveErr) => {
