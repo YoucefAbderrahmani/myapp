@@ -4,12 +4,18 @@ const User = require('../models/User');
 const Tournament = require('../models/Tournament');
 const StoreItem = require('../models/StoreItem');
 
-// ✅ Fix: Handle root route so / shows home page
+// ✅ Log all requests (for debugging in Render)
+router.use((req, res, next) => {
+  console.log(`[${req.method}] ${req.originalUrl} | Authenticated: ${req.isAuthenticated()} | User ID: ${req.session.userId || 'None'}`);
+  next();
+});
+
+// ✅ Redirect root to main/home
 router.get('/', (req, res) => {
   res.redirect('/main/home');
 });
 
-// Middleware to check authentication
+// ✅ Authentication middleware
 function ensureAuthenticated(req, res, next) {
   if (!req.isAuthenticated() || !req.session.userId) {
     console.log('[Auth] Not authenticated or missing session userId');
@@ -23,14 +29,12 @@ function ensureAuthenticated(req, res, next) {
         return res.redirect('/login');
       }
 
-      console.log('[Auth] User found:', user.username, user.phone);
-
       req.user = user;
 
       const profileIncomplete = !user.username?.trim() || !user.phone?.trim();
-      console.log('[Auth] Profile complete?', !profileIncomplete);
 
       if (profileIncomplete && !req.originalUrl.startsWith('/complete-profile')) {
+        console.log('[Auth] Profile incomplete. Redirecting to /complete-profile');
         return res.redirect('/complete-profile');
       }
 
@@ -42,15 +46,15 @@ function ensureAuthenticated(req, res, next) {
     });
 }
 
-// Apply middleware to protected routes
+// ✅ Apply middleware to protected routes
 router.use(['/main', '/complete-profile'], ensureAuthenticated);
 
-// Main page redirect
+// ✅ Redirect /main to /main/home
 router.get('/main', (req, res) => {
   res.redirect('/main/home');
 });
 
-// Dynamic main pages
+// ✅ Dynamic pages under /main
 router.get('/main/:page', async (req, res) => {
   const validPages = ['home', 'tournaments', 'store', 'profile', 'about'];
   const currentPage = req.params.page;
@@ -87,7 +91,7 @@ router.get('/main/:page', async (req, res) => {
   }
 });
 
-// Complete profile GET
+// ✅ GET: Complete profile
 router.get('/complete-profile', (req, res) => {
   if (req.user.username && req.user.phone) {
     return res.redirect('/main/home');
@@ -100,7 +104,7 @@ router.get('/complete-profile', (req, res) => {
   });
 });
 
-// Complete profile POST
+// ✅ POST: Complete profile
 router.post('/complete-profile', async (req, res) => {
   const { username, phone } = req.body;
 
@@ -113,7 +117,6 @@ router.post('/complete-profile', async (req, res) => {
   }
 
   try {
-    // Check if username is already taken
     const existingUser = await User.findOne({
       username,
       _id: { $ne: req.user._id }
@@ -127,7 +130,6 @@ router.post('/complete-profile', async (req, res) => {
       });
     }
 
-    // Check if phone number is already in use
     const existingPhone = await User.findOne({
       phone,
       _id: { $ne: req.user._id }
@@ -183,7 +185,7 @@ router.post('/complete-profile', async (req, res) => {
   }
 });
 
-// Logout
+// ✅ Logout
 router.get('/logout', (req, res) => {
   req.logout(() => {
     req.session.destroy(err => {
