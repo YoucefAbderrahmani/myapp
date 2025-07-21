@@ -7,17 +7,21 @@ const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const mongoose = require('mongoose');
 const path = require('path');
+const http = require('http');
+const { Server } = require('socket.io');
 
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server);
 
 // ✅ Connect to MongoDB
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/yourdb', {
+mongoose.connect(process.env.MONGODB_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true
 }).then(() => console.log('✅ Connected to MongoDB'))
   .catch(err => console.error('❌ MongoDB connection error:', err));
 
-// ✅ View Engine (EJS)
+// ✅ View Engine
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
@@ -26,32 +30,29 @@ app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// ✅ Sessions with MongoStore
+// ✅ Session
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'your-secret-key',
+  secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
-  store: MongoStore.create({
-    mongoUrl: process.env.MONGODB_URI || 'mongodb://localhost:27017/yourdb',
-  }),
+  store: MongoStore.create({ mongoUrl: process.env.MONGODB_URI }),
   cookie: {
-    secure: false, // Set to true if using HTTPS
+    secure: process.env.NODE_ENV === 'production',
     maxAge: 24 * 60 * 60 * 1000
   }
 }));
 
-// ✅ Passport init
+// ✅ Passport setup
 app.use(passport.initialize());
 app.use(passport.session());
 
-// ✅ User model
 const User = require('./models/User');
 
 // ✅ Google OAuth Strategy
 passport.use(new GoogleStrategy({
   clientID: process.env.GOOGLE_CLIENT_ID,
   clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-  callbackURL: process.env.GOOGLE_CALLBACK_URL || 'http://localhost:3000/auth/google/callback'
+  callbackURL: process.env.GOOGLE_CALLBACK_URL
 }, async (accessToken, refreshToken, profile, done) => {
   try {
     let user = await User.findOne({ googleId: profile.id });
@@ -73,9 +74,7 @@ passport.use(new GoogleStrategy({
   }
 }));
 
-// ✅ Passport session handlers
 passport.serializeUser((user, done) => done(null, user.id));
-
 passport.deserializeUser(async (id, done) => {
   try {
     const user = await User.findById(id);
@@ -85,7 +84,7 @@ passport.deserializeUser(async (id, done) => {
   }
 });
 
-// ✅ Google OAuth Routes
+// ✅ Google Auth Routes
 app.get('/auth/google',
   passport.authenticate('google', {
     scope: ['profile', 'email'],
@@ -99,7 +98,6 @@ app.get('/auth/google/callback',
     try {
       const user = req.user;
 
-      // ✅ Refresh passport session manually to ensure it's saved properly
       req.login(user, (err) => {
         if (err) {
           console.error('Login error after Google callback:', err);
@@ -134,7 +132,7 @@ app.get('/logout', (req, res, next) => {
   });
 });
 
-// ✅ Routes
+// ✅ App Routes
 const authRoutes = require('./routes/auth');
 const mainRoutes = require('./routes/mainRoutes');
 
@@ -162,32 +160,18 @@ app.use((err, req, res, next) => {
   });
 });
 
-const http = require('http');
-const { Server } = require('socket.io');
-
-const server = http.createServer(app);
-const io = new Server(server);
-
-// In-memory message history (optional: store in DB)
+// ✅ Chat with Socket.io
 let messageHistory = [];
 
 io.on('connection', (socket) => {
   console.log('💬 A user connected');
-
-  // Send chat history
   socket.emit('chat history', messageHistory);
 
-  // Receive message
-  socket.on('chat message', (data) => {
-    const { username, msg } = data;
+  socket.on('chat message', ({ username, msg }) => {
     if (username && msg) {
       const messageData = { username, msg };
-
       messageHistory.push(messageData);
-
-      // Limit history size (optional)
       if (messageHistory.length > 100) messageHistory.shift();
-
       io.emit('chat message', messageData);
     }
   });
@@ -197,8 +181,9 @@ io.on('connection', (socket) => {
   });
 });
 
+// ✅ Start Server
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`🚀 Server running at http://localhost:${PORT}`);
-  console.log('💬 Chat & 🔐 Google OAuth ready');
+  console.log('🌐 Callback URL:', process.env.GOOGLE_CALLBACK_URL);
 });
